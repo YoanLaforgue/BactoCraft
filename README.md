@@ -41,7 +41,7 @@ Dans un contexte hospitalier caractérisé par un flux patient important, l'éme
 
 Ce tutoriel décrit les différentes étapes de la méthodologie `BactoCraft`. Les chemins (`$path/...`) et variables (`$nb_threads`, `$numBarcode`) doivent être adaptés à votre environnement.
 
-Les données de séquençage utilisées pour ce tutoriel sont disponibles sur Zenodo :
+Les données de séquençage utilisées pour ce tutoriel sont disponibles sur Zenodo : [ONT POD5](https://zenodo.org/records/18644616)
 
 ### Étape 1 : Basecalling & Demultiplexing
 
