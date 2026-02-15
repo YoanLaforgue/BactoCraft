@@ -33,7 +33,7 @@ Dans un contexte hospitalier caractérisé par un flux patient important, l'éme
     *   `Python` (v3.9)
     *   Packages : `edlib`, `biopython`
 *   **Script .py**
-    *   `split_fastq_coverage.py` : 
+    *   `split_fastq_coverage.py` : Réalise un sous-échantillonnage des fichiers FASTQ en fonction de la taille du génome et de la profondeur de couverture souhaitée.
 
 ---
 
