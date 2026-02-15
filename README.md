@@ -57,7 +57,7 @@ dorado duplex --threads "${SLURM_CPUS_PER_TASK}" --device cuda:0 ${MODEL_DIR}/dn
 dorado demux --emit-fastq --threads "${SLURM_CPUS_PER_TASK}" --verbose --kit-name SQK-NBD114-96 "${FASTQ_DIR}/barcode_all.bam" -o "${DEMUXED_DIR}"
 ```
 
-### Étape 2 : Contrôle Qualité Initial (QC) des *Reads*
+### Étape 2 : Contrôle qualité des *Reads*
 
 Évaluation de la qualité globale du run de séquençage.
 
@@ -70,7 +70,7 @@ NanoPlot -t "$nb_threads" \
         --plots dot
 ```
 
-### Étape 3 : Suppression des Adaptateurs ONT
+### Étape 3 : Suppression des adaptateurs
 
 Utilisation de `porechop` pour supprimer les séquences d'adaptateurs résiduelles.
 
@@ -99,9 +99,9 @@ ex:
 NanoFilt ${FASTQ} -q 15 --headcrop 10 --tailcrop 10 --length 10000 --maxlength 1000000 > ${TRIM > 10K}
 ```
 
-### Étape 5 : Correction des erreurs (Herro)
+### Étape 5 : Correction des erreurs
 
-Avant l'assemblage, les reads longs (>10kb) subissent une correction via l'algorithme Herro (intégré dans Dorado). Cela réduit drastiquement les erreurs liées au séquençage.
+Avant l'assemblage, les reads longs (>10kb) subissent une correction via l'algorithme `Herro` (intégré dans `Dorado`). Cela réduit drastiquement les erreurs liées au séquençage.
 
 ```bash
 dorado correct --model-path ./herro-v1 input.fastq > corrected.fasta
@@ -116,3 +116,79 @@ flye --nano-corr "$MERGED_CORRECTED" --out-dir ${ASSEMBLY_DIR}/NANO_CORR --threa
 ```
 
 > **Note :** L'option `--deterministic` est cruciale en contexte clinique pour garantir que deux analyses du même jeu de données produisent exactement le même résultat (reproductibilité).
+
+### Étape 7 : Assemblage "rescue"
+
+Si l'assemblage "initial" est fragmenté ou non circulaire, le pipeline bascule automatiquement vers l'assemblage "rescue".
+
+La gestion de la profondeur de séquençage est un paramètre critique en assemblage *de novo*. Il existe une fenêtre optimale de quantité de données :
+
+> * **Insuffisante :** Le graphe d'assemblage présente des ruptures (gaps), empêchant la circularisation.
+
+> * **Excessive :** Une surcharge de données (>500x) peut dégrader la qualité de l'assemblage. Elle introduit un bruit de fond stochastique et des artefacts de séquençage qui complexifient inutilement le graphe, conduisant à des erreurs d'assemblages.
+
+L'objectif de cette étape est de rationaliser l'apport en données. Le pipeline effectue un **sous-échantillonnage** des reads >4kb.
+
+Le script calcule et extrait précisément le nombre de reads nécessaire pour atteindre une couverture théorique cible de **200X**. 
+
+1. **Sous-échantillonnage :**
+
+```bash
+python3 "${MODEL_DIR}/split_fastq_coverage.py" --input_fastq "${TRIM_4K}" --output_folder "$SUBSET_DIR" --genome_size "$GENOME_SIZE_BP" --nanostats "${NANOPLOT_DIR}/reads_4k_100k/NanoStats.txt" --X 200
+```   
+
+2. **Assemblage :**
+
+`Flye` est exécuté en mode `--nano-hq`.
+
+```bash
+for READ_SET in "$SUBSET_DIR"/*.fastq*; do
+            [ -f "$READ_SET" ] || continue
+            BASENAME=$(basename "$READ_SET" | cut -d. -f1)
+            
+            DIR_FLYE_HQ="${ASSEMBLY_DIR}/FLYE_TEMP_${BASENAME}"
+
+            flye --nano-hq "$READ_SET" --out-dir "$DIR_FLYE_HQ" --threads "${SLURM_CPUS_PER_TASK}" --deterministic --meta --genome-size "${GENOME_SIZE}"
+            
+            if ls "${DIR_FLYE_HQ}/"assembly.fasta >/dev/null 2>&1; then
+                cp "${DIR_FLYE_HQ}/"assembly.fasta "${ASSEMBLY_DIR}/NANO_HQ/assembly_flye_${BASENAME}.fasta"
+            fi
+
+            rm -rf "$DIR_FLYE_HQ" "$READ_SET"
+done
+```
+3. **Consensus calling :**
+
+Afin de regrouper les différents assemblages et de générer une séquence consensus, nous utilisons l’outil `Autocycler`.
+
+```bash
+autocycler compress -i "${ASSEMBLY_DIR}/NANO_HQ" -a "$AUTOCYCLER_OUT"
+
+autocycler cluster -a "$AUTOCYCLER_OUT"
+for c in "${AUTOCYCLER_OUT}/clustering/qc_pass/cluster_"*; do
+            autocycler trim -c "$c" 
+            autocycler resolve -c "$c"
+done
+
+autocycler combine -a "$AUTOCYCLER_OUT" -i "${AUTOCYCLER_OUT}/clustering/qc_pass/cluster_"*"/5_final.gfa"
+```
+
+### Étape 8 : Polissage
+
+L'assemblage final est poli avec `Medaka` avec les reads > Q25.
+
+Le `--model` r1041_e82_400bps_bacterial_methylation prend en compte la méthylation bactérienne.
+
+```bash
+medaka_consensus -i "${TRIM_1K}" -d "$CONSENSUS_HQ_RAW" -o "${CONSENSUS_DIR}" -m r1041_e82_400bps_bacterial_methylation -t "${SLURM_CPUS_PER_TASK}"  --bacteria    
+```
+
+---
+
+## Perspectives
+
+Les avancées récentes dans le domaine de la reconstruction génomique ont permis une amélioration significative de la qualité des génomes bactériens obtenus. 
+
+À titre personnel, il semble que nous ayons atteint un plafond technologique. Le principal défi ne réside désormais plus dans l’analyse elle-même, mais plutôt au niveau organisationnel et clinique : faire accepter le séquençage du génome bactérien complet comme un outil de routine en pratique clinique. Un grand nombre d’espèces bactériennes n’ont pas encore été séquencées et assemblées selon des méthodologies rigoureuses. L’étude approfondie de ces organismes représente une opportunité majeure pour améliorer notre compréhension.
+
+Enfin, des progrès restent nécessaires concernant l’interprétation des données. Bien que des outils performants, tels que chewBBACA, permettent l’analyse du cgMLST, le nombre de schémas actuellement disponibles demeure insuffisant. L’élargissement de ces référentiels constitue donc un enjeu important pour une exploitation des données de séquençage.
