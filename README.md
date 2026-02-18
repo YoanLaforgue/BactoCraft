@@ -2,13 +2,13 @@
 
 > **BactoCraft** est une méthodologie d'analyse bioinformatique conçue pour reconstruire des génomes bactériens circulaires et complets en utilisant uniquement le séquençage Oxford Nanopore Technologies (ONT). 
 
-Développé dans un cadre hospitalier, cet outil vise à fournir un diagnostic de précision, offrant une alternative moderne et rapide au pulsotypage (PFGE - *Pulsed-Field Gel Electrophoresis*) pour l'investigation des clusters épidémiques et la détection des facteurs de virulence/résistance.
+Développé dans un cadre hospitalier, cet outil vise à fournir un diagnostic de précision, offrant une alternative au pulsotypage (PFGE - *Pulsed-Field Gel Electrophoresis*) pour l'investigation des clusters épidémiques.
 
 ---
 
-## Contexte :
+## Contexte
 
-Dans un contexte hospitalier caractérisé par un flux patient important, l'émergence de clusters bactériens nosocomiaux est une préoccupation majeure. Les techniques traditionnelles de biologie moléculaire permettent de distinguer des espèces mais manquent souvent de la résolution pour discriminer des souches clonales dans des cas complexes.
+Dans un contexte hospitalier caractérisé par un flux de patient important, l'émergence de clusters bactériens nosocomiaux est une préoccupation majeure. Les techniques traditionnelles de biologie moléculaire permettent de distinguer des espèces mais manquent souvent de la résolution pour discriminer des souches clonales dans des cas complexes.
 
 **Les objectifs de la reconstruction génomique sont :**
 1.  **Épidémiologie génomique :** Reconstruire le génome complet pour confirmer ou infirmer la présence d'un cluster hospitalier avec une résolution fine (niveau SNP/cgMLST).
@@ -33,7 +33,7 @@ Dans un contexte hospitalier caractérisé par un flux patient important, l'éme
     *   `Python` (v3.9)
     *   Packages : `edlib`, `biopython`
 *   **Script .py**
-    *   `split_fastq_coverage.py` : Réalise un sous-échantillonnage des fichiers FASTQ en fonction de la taille du génome et de la profondeur de couverture souhaitée.
+    *   `split_fastq_coverage.py` : Réalise un sous-échantillonnage des fichiers FASTQ en fonction de la taille du génome et de la "depth coverage" souhaitée.
 
 ---
 
@@ -47,7 +47,7 @@ Les données de séquençage utilisées pour ce tutoriel sont disponibles sur Ze
 
 Le basecalling est réalisé avec **Dorado** en mode `duplex`.
 
-Le séquençage `duplex` permet de lire les deux brins d'une même molécule d'ADN. Cela génère des reads avec une qualité >Q30, rivalisant avec le séquençage court.
+Le séquençage `duplex` permet de lire les deux brins d'une molécule d'ADN. Cela génère des reads avec une qualité >Q30, rivalisant avec le séquençage court.
 
 ```bash
 dorado duplex --threads "${SLURM_CPUS_PER_TASK}" --device cuda:0 ${MODEL_DIR}/dna_r10.4.1_e8.2_400bps_sup@v5.0.0 -r ${POD5_DIR} > ${FASTQ_DIR}/barcode_all.bam
@@ -57,7 +57,7 @@ dorado duplex --threads "${SLURM_CPUS_PER_TASK}" --device cuda:0 ${MODEL_DIR}/dn
 dorado demux --emit-fastq --threads "${SLURM_CPUS_PER_TASK}" --verbose --kit-name SQK-NBD114-96 "${FASTQ_DIR}/barcode_all.bam" -o "${DEMUXED_DIR}"
 ```
 
-### Étape 2 : Contrôle qualité des *Reads*
+### Étape 2 : Contrôle qualité des Reads
 
 Évaluation de la qualité globale du run de séquençage.
 
@@ -85,15 +85,13 @@ porechop -i input.fastq -o adapter_trim.fastq
 
 <img width="1318" height="640" alt="Capture d’écran 2026-02-14 2249161" src="https://github.com/user-attachments/assets/5170c1f5-7a90-4223-a3d5-5a9fc34b5fe2" />
 
-Dans un contexte d’activité de routine, la qualité des données produites n’est pas toujours homogène. Elle peut être influencée par divers facteurs (qualité de l’extraction d’ADN, usure des flow cells) qui impactent directement le déroulement du run.
+Dans un contexte d’activité de routine, la qualité des données produites n’est pas toujours homogène. Elle peut être influencée par divers facteurs (qualité de l’extraction, usure des flow cells...) qui impactent directement le déroulement du run.
 
-Cette variabilité est particulièrement marquée lors de la comparaison entre les bactéries Gram négatif, qui fournissent généralement des fragments d’ADN longs, et les bactéries Gram positif, dont la paroi cellulaire épaisse complique l’extraction des fragments de grande taille.
+Afin de prendre en compte cette hétérogénéité et de garantir des résultats exploitables, y compris à partir de runs non optimaux, `BactoCraft` n’applique pas un filtrage uniforme des reads. À la place, les données sont segmentées en trois populations distinctes, chacune remplissant un rôle spécifique dans le processus de reconstruction :
 
-Afin de prendre en compte cette hétérogénéité et de garantir des résultats exploitables, y compris à partir de runs non optimaux, `BactoCraft` n’applique pas un filtrage global et uniforme des reads. À la place, les données sont segmentées en trois populations distinctes, chacune remplissant un rôle spécifique dans le processus de reconstruction :
-
-- reads > 10k pb --> reads correction --> assemblage "initial"
-- reads > 4k pb --> assemblage "rescue"
-- reads > Q25 --> polishing
+- reads > **10k** pb --> reads correction --> assemblage "initial"
+- reads > **4k** pb --> assemblage "rescue"
+- reads > **Q25** --> polishing
 ex:
 ```bash
 NanoFilt ${FASTQ} -q 15 --headcrop 10 --tailcrop 10 --length 10000 --maxlength 1000000 > ${TRIM > 10K}
@@ -101,7 +99,7 @@ NanoFilt ${FASTQ} -q 15 --headcrop 10 --tailcrop 10 --length 10000 --maxlength 1
 
 ### Étape 5 : Correction des erreurs
 
-Avant l'assemblage, les reads longs (>10kb) subissent une correction via l'algorithme `Herro` (intégré dans `Dorado`). Cela réduit drastiquement les erreurs liées au séquençage.
+Avant l'assemblage, les reads longs (**>10kb**) subissent une correction via l'algorithme `Herro` (intégré dans `Dorado`). Cela réduit drastiquement les erreurs liées au séquençage.
 
 ```bash
 dorado correct --model-path ./herro-v1 input.fastq > corrected.fasta
