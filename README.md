@@ -1,5 +1,12 @@
 # BactoCraft
 
+<div align="center">
+  <a href="[https://github.com/YoanLaforgue/BactoCraft/blob/main/logo_bactocraft.png]">
+    <img src="/logo_bactocraft.png" alt="BactoCraft" width="280"/>
+  </a>
+  <br><br>
+</div>
+
 > **BactoCraft** est une méthodologie d'analyse bioinformatique conçue pour reconstruire des génomes bactériens circulaires et complets en utilisant uniquement le séquençage Oxford Nanopore Technologies (ONT). 
 
 Développé dans un cadre hospitalier, cet outil vise à fournir un diagnostic de précision, offrant une alternative au pulsotypage (PFGE - *Pulsed-Field Gel Electrophoresis*) pour l'investigation des clusters épidémiques.
@@ -50,11 +57,11 @@ Le basecalling est réalisé avec **Dorado** en mode `duplex`.
 Le séquençage `duplex` permet de lire les deux brins d'une molécule d'ADN. Cela génère des reads avec une qualité >Q30, rivalisant avec le séquençage court.
 
 ```bash
-dorado duplex --threads "${SLURM_CPUS_PER_TASK}" --device cuda:0 ${MODEL_DIR}/dna_r10.4.1_e8.2_400bps_sup@v5.0.0 -r ${POD5_DIR} > ${FASTQ_DIR}/barcode_all.bam
+dorado duplex --threads "$nb_threads" --device cuda:0 ${MODEL_DIR}/dna_r10.4.1_e8.2_400bps_sup@v5.0.0 -r ${POD5_DIR} > ${FASTQ_DIR}/barcode_all.bam
 ```
 
 ```bash
-dorado demux --emit-fastq --threads "${SLURM_CPUS_PER_TASK}" --verbose --kit-name SQK-NBD114-96 "${FASTQ_DIR}/barcode_all.bam" -o "${DEMUXED_DIR}"
+dorado demux --emit-fastq --threads "$nb_threads" --verbose --kit-name SQK-NBD114-96 "${FASTQ_DIR}/barcode_all.bam" -o "${DEMUXED_DIR}"
 ```
 
 ### Étape 2 : Contrôle qualité des Reads
@@ -110,7 +117,7 @@ dorado correct --model-path ./herro-v1 input.fastq > corrected.fasta
 Flye est exécuté en mode `--nano-corr`.
 
 ```bash
-flye --nano-corr "$MERGED_CORRECTED" --out-dir ${ASSEMBLY_DIR}/NANO_CORR --threads ${SLURM_CPUS_PER_TASK} --deterministic --meta --genome-size ${GENOME_SIZE}
+flye --nano-corr "$MERGED_CORRECTED" --out-dir ${ASSEMBLY_DIR}/NANO_CORR --threads "$nb_threads" --deterministic --meta --genome-size ${GENOME_SIZE}
 ```
 
 > **Note :** L'option `--deterministic` est cruciale en contexte clinique pour garantir que deux analyses du même jeu de données produisent exactement le même résultat (reproductibilité).
@@ -178,7 +185,7 @@ L'assemblage final est poli avec `Medaka` avec les reads > Q25.
 Le `--model` r1041_e82_400bps_bacterial_methylation prend en compte la méthylation bactérienne.
 
 ```bash
-medaka_consensus -i "${TRIM_1K}" -d "$CONSENSUS_HQ_RAW" -o "${CONSENSUS_DIR}" -m r1041_e82_400bps_bacterial_methylation -t "${SLURM_CPUS_PER_TASK}"  --bacteria    
+medaka_consensus -i "${TRIM_1K}" -d "$CONSENSUS_HQ_RAW" -o "${CONSENSUS_DIR}" -m r1041_e82_400bps_bacterial_methylation -t "$nb_threads"  --bacteria    
 ```
 
 ---
