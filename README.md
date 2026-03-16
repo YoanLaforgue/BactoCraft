@@ -2,7 +2,7 @@
 
 <div align="center">
   <a href="[https://github.com/YoanLaforgue/BactoCraft/blob/main/logo_bactocraft.png]">
-    <img src="/logo_bactocraft.png" alt="BactoCraft" width="280"/>
+    <img src="/logo_bactocraft.png" alt="BactoCraft" width="340"/>
   </a>
   <br><br>
 </div>
