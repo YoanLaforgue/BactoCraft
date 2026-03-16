@@ -72,7 +72,7 @@ dorado demux --emit-fastq --threads "$nb_threads" --verbose --kit-name SQK-NBD11
 NanoPlot -t "$nb_threads" \
         --fastq "$path/to/your/fastq/$numBarcode.fastq" \
         --title "${dateSeq}_${numBarcode}_QC" \
-        --outdir "$path/to/output/NANOPLOT_REPORT" \
+        --outdir "$path/to/output/nanoplot_report" \
         --maxlength 1000000 \
         --plots dot
 ```
@@ -82,7 +82,7 @@ NanoPlot -t "$nb_threads" \
 Utilisation de `porechop` pour supprimer les séquences d'adaptateurs résiduelles.
 
 ```bash
-porechop -i input.fastq -o adapter_trim.fastq
+porechop -i "$path/to/your/fastq/$numBarcode.fastq" -o "$path/to/output/$numBarcode_adapter_trim.fastq"
 ```
 
 
@@ -101,7 +101,7 @@ Afin de prendre en compte cette hétérogénéité et de garantir des résultats
 - reads > **Q25** --> polishing
 ex:
 ```bash
-NanoFilt ${FASTQ} -q 15 --headcrop 10 --tailcrop 10 --length 10000 --maxlength 1000000 > ${TRIM > 10K}
+NanoFilt "$path/to/your/fastq/$numBarcode_adapter_trim.fastq" -q 15 --headcrop 10 --tailcrop 10 --length 10000 --maxlength 1000000 > "$path/to/output/$numBarcode_10k_reads.fastq"
 ```
 
 ### Étape 5 : Correction des erreurs
@@ -109,7 +109,7 @@ NanoFilt ${FASTQ} -q 15 --headcrop 10 --tailcrop 10 --length 10000 --maxlength 1
 Avant l'assemblage, les reads longs (**>10kb**) subissent une correction via l'algorithme `Herro` (intégré dans `Dorado`). Cela réduit drastiquement les erreurs liées au séquençage.
 
 ```bash
-dorado correct --model-path ./herro-v1 input.fastq > corrected.fasta
+dorado correct --model-path "$path/to/your/model/herro-v1" "$path/to/your/fastq/$numBarcode_10k_reads.fastq" > "$path/to/output/corrected_reads.fasta"
 ```
 
 ### Étape 6 : Assemblage "initial"
@@ -117,7 +117,7 @@ dorado correct --model-path ./herro-v1 input.fastq > corrected.fasta
 Flye est exécuté en mode `--nano-corr`.
 
 ```bash
-flye --nano-corr "$MERGED_CORRECTED" --out-dir ${ASSEMBLY_DIR}/NANO_CORR --threads "$nb_threads" --deterministic --meta --genome-size ${GENOME_SIZE}
+flye --nano-corr "$path/to/your/corrected_reads.fasta" --out-dir "$path/to/output/assembly_dir/nano-corr" --threads "$nb_threads" --deterministic --meta --genome-size ${GENOME_SIZE}
 ```
 
 > **Note :** L'option `--deterministic` est cruciale en contexte clinique pour garantir que deux analyses du même jeu de données produisent exactement le même résultat (reproductibilité).
@@ -139,7 +139,7 @@ Le script calcule et extrait précisément le nombre de reads nécessaire pour a
 1. **Sous-échantillonnage :**
 
 ```bash
-python3 "${MODEL_DIR}/split_fastq_coverage.py" --input_fastq "${TRIM_4K}" --output_folder "$SUBSET_DIR" --genome_size "$GENOME_SIZE_BP" --nanostats "${NANOPLOT_DIR}/reads_4k_100k/NanoStats.txt" --X 200
+python3 split_fastq_coverage.py --input_fastq "$path/to/your/fastq/$numBarcode_4k_reads.fastq" --output_folder "$path/to/output/subset_dir" --genome_size "$GENOME_SIZE_BP" --nanostats "$path/to/your/reads_4k_100k_nanoplot_report_folder/NanoStats.txt" --X 200
 ```   
 
 2. **Assemblage :**
@@ -147,16 +147,16 @@ python3 "${MODEL_DIR}/split_fastq_coverage.py" --input_fastq "${TRIM_4K}" --outp
 `Flye` est exécuté en mode `--nano-hq`.
 
 ```bash
-for READ_SET in "$SUBSET_DIR"/*.fastq*; do
+for READ_SET in "$subset_dir"/*.fastq*; do
             [ -f "$READ_SET" ] || continue
             BASENAME=$(basename "$READ_SET" | cut -d. -f1)
             
-            DIR_FLYE_HQ="${ASSEMBLY_DIR}/FLYE_TEMP_${BASENAME}"
+            DIR_FLYE_HQ="$path/to/output/assembly_dir/nano-hq/FLYE_TEMP_${BASENAME}"
 
-            flye --nano-hq "$READ_SET" --out-dir "$DIR_FLYE_HQ" --threads "${SLURM_CPUS_PER_TASK}" --deterministic --meta --genome-size "${GENOME_SIZE}"
+            flye --nano-hq "$READ_SET" --out-dir "$DIR_FLYE_HQ" --threads "$nb_threads" --deterministic --meta --genome-size "${GENOME_SIZE}"
             
             if ls "${DIR_FLYE_HQ}/"assembly.fasta >/dev/null 2>&1; then
-                cp "${DIR_FLYE_HQ}/"assembly.fasta "${ASSEMBLY_DIR}/NANO_HQ/assembly_flye_${BASENAME}.fasta"
+                cp "${DIR_FLYE_HQ}/"assembly.fasta "$path/to/output/assembly_dir/nano-hq/assembly_flye_${BASENAME}.fasta"
             fi
 
             rm -rf "$DIR_FLYE_HQ" "$READ_SET"
@@ -185,7 +185,7 @@ L'assemblage final est poli avec `Medaka` avec les reads > Q25.
 Le `--model` r1041_e82_400bps_bacterial_methylation prend en compte la méthylation bactérienne.
 
 ```bash
-medaka_consensus -i "${TRIM_1K}" -d "$CONSENSUS_HQ_RAW" -o "${CONSENSUS_DIR}" -m r1041_e82_400bps_bacterial_methylation -t "$nb_threads"  --bacteria    
+medaka_consensus -i "$path/to/your/fastq/$numBarcode_1k_reads.fastq" -d "$CONSENSUS_RAW" -o "${CONSENSUS_DIR}" -m r1041_e82_400bps_bacterial_methylation -t "$nb_threads"  --bacteria    
 ```
 
 ---
