@@ -190,7 +190,7 @@ medaka_consensus -i "$path/to/your/fastq/$numBarcode_1k_reads.fastq" -d "$CONSEN
 
 <div align="center">
   <a href="[https://github.com/YoanLaforgue/BactoCraft/blob/main/imgs/result_atcc_700603.png]">
-    <img src="/imgs/result_atcc_700603.png" alt="ATCC" width="850"/>
+    <img src="/imgs/result_atcc_700603.png" alt="ATCC" width="1000"/>
   </a>
   <br><br>
 </div>
