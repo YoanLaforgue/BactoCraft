@@ -1,8 +1,8 @@
 # BactoCraft
 
 <div align="center">
-  <a href="[https://github.com/YoanLaforgue/BactoCraft/tree/main/imgs]">
-    <img src="/imgs/logo_bactocraft.png" alt="BactoCraft" width="340"/>
+  <a href="[https://github.com/YoanLaforgue/BactoCraft/blob/main/imgs/logo_bactocraft.png]">
+    <img src="/imgs/logo_bactocraft.png" alt="BactoCraft_logo" width="340"/>
   </a>
   <br><br>
 </div>
@@ -190,7 +190,7 @@ medaka_consensus -i "$path/to/your/fastq/$numBarcode_1k_reads.fastq" -d "$CONSEN
 
 <div align="center">
   <a href="[https://github.com/YoanLaforgue/BactoCraft/blob/main/imgs/result_atcc_700603.png]">
-    <img src="/imgs/result_atcc_700603.png" alt="ATCC" width="340"/>
+    <img src="/imgs/result_atcc_700603.png" alt="ATCC" width="850"/>
   </a>
   <br><br>
 </div>
