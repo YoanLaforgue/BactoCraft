@@ -2,7 +2,7 @@
 
 <div align="center">
   <a href="[https://github.com/YoanLaforgue/BactoCraft/blob/main/logo_bactocraft.png]">
-    <img src="/logo_bactocraft.png" alt="BactoCraft" width="340"/>
+    <img src="/imgs/logo_bactocraft.png" alt="BactoCraft" width="340"/>
   </a>
   <br><br>
 </div>
@@ -187,6 +187,13 @@ Le `--model` r1041_e82_400bps_bacterial_methylation prend en compte la méthylat
 ```bash
 medaka_consensus -i "$path/to/your/fastq/$numBarcode_1k_reads.fastq" -d "$CONSENSUS_RAW" -o "${CONSENSUS_DIR}" -m r1041_e82_400bps_bacterial_methylation -t "$nb_threads"  --bacteria    
 ```
+
+<div align="center">
+  <a href="[https://github.com/YoanLaforgue/BactoCraft/blob/main/imgs/result_atcc_700603.png]">
+    <img src="/imgs/result_atcc_700603" alt="ATCC" width="340"/>
+  </a>
+  <br><br>
+</div>
 
 ---
 
