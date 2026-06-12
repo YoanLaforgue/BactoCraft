@@ -130,7 +130,7 @@ La gestion de la profondeur de séquençage est un paramètre critique en assemb
 
 > * **Insuffisante :** Le graphe d'assemblage présente des ruptures (gaps), empêchant la circularisation.
 
-> * **Excessive :** Une surcharge de données (>500x) peut dégrader la qualité de l'assemblage. Elle introduit un bruit de fond stochastique et des artefacts de séquençage qui complexifient inutilement le graphe, conduisant à des erreurs d'assemblages.
+> * **Excessive :** Une surcharge de données peut dégrader la qualité de l'assemblage. Elle introduit un bruit de fond stochastique et des artefacts de séquençage qui complexifient inutilement le graphe, conduisant à des erreurs d'assemblages.
 
 L'objectif de cette étape est de rationaliser l'apport en données. Le pipeline effectue un **sous-échantillonnage** des reads >4kb.
 
@@ -194,6 +194,15 @@ medaka_consensus -i "$path/to/your/fastq/$numBarcode_1k_reads.fastq" -d "$CONSEN
   </a>
   <br><br>
 </div>
+
+---
+## Réflexion
+
+Plusieurs travaux ont montré que certaines souches bactériennes sont plus difficiles à extraire que d'autres, ce qui influence directement la qualité de l'ADN obtenu, notamment la taille des fragments. L'obtention d'un ADN génomique de haut poids moléculaire est particulièrement importante pour certaines espèces en raison de la présence de régions répétées, telles que les opérons ARNr ou des séquences homologues entre chromosome et plasmides. La disponibilité de fragments longs (> 10k pb) facilite considérablement la reconstruction de génomes complets et circulaires. 
+
+Dans ce contexte, **Autocycler** agit comme un outil de consensus entre plusieurs assemblages. Toutefois, si aucun des assembleurs utilisés n'est capable de résoudre les régions répétées et de fermer correctement le graphe d'assemblage, Autocycler ne peut pas reconstruire la structure génomique correcte de manière artificielle. Son rôle se limite alors à consolider des contigs déjà fragmentés.
+
+D'après les différents tests réalisés, cette situation semble particulièrement fréquente au sein du groupe *Bacillus cereus*. Pour ces souches, le taux de *mismatches per 100 kbp* ne semblerait généralement pas descendre en dessous de *1*, tandis que le taux d'*indels per 100 kbp* se stabiliserait autour de *0,35*. Ces observations paraîtraient cohérentes avec celles rapportées dans la littérature ainsi qu'avec les retours de plusieurs acteurs du domaine. : [Kirk3gaard](https://github.com/Kirk3gaard/MicroBench/tree/main/analysis/zymohmw#hac-v600-mode-vs-sup-v520).
 
 ---
 
